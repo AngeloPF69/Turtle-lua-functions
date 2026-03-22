@@ -38,6 +38,7 @@ carDirType = {["north"] = 0, ["east"] = 1, ["south"] = 2, ["west"] = 3} --cardin
 function isCarDirType(sCar)
 	return carDirType[sCar]
 end
+
 negOrient = {["forward"] = "back", ["right"] = "left", ["back"] = "forward", ["left"] = "right", ["up"] = "down", ["down"] = "up", ["z+"] = "z-", ["z-"] = "z+", ["x+"] = "x-", ["x-"] = "x+", ["y+"] = "y-", ["y-"] = "y+", [0] = 2, [2] = 0, [1] = 3, [3] = 1, ["north"] = "south", ["south"] = "north", ["east"] = "west", ["west"] = "east"}
 
 tTurtle = { ["x"] = 0, ["y"] = 0, ["z"] = 0, --coords for turtle
@@ -116,7 +117,6 @@ end
 
 function saveSpots() --[[ Saves table tSpots in text file tSpots.txt
   05-08-2022 v0.4.0]]
-
   return saveTable(tSpots,"tSpots.txt")
 end
 
@@ -132,15 +132,40 @@ function loadSpots() --[[ Loads from file tSpots.txt to table tSpots
   return true
 end
 
+function incSpotName() --[[ Increments the name of the next spot
+  04/03/2026 v0.4.0
+  ]]
+  counter = string.sub(tSpots.sNextSpot, 5)
+  counter = tonumber(counter)
+  counter = counter + 1
+  SpotStr = ""
+  if counter < 100 then SpotStr = "Spot0" end
+  if counter < 10 then SpotStr = "Spot00" end
+  tSpots.sNextSpot = SpotStr..tostring(counter)
+  return true
+end
+
+-- not tested
 function setSpot(sSpotName, x, y, z, nFacing) --[[ Sets a spot in tSpots table.
   05-08-2022 v0.4.0
   Param: sSpotName - string the name of the spot.
            x, y, z - coords of spot.
            nFacing - the direction in that spot.
-  Returns: true - if spot was set with success.
-  Sintax: setSpot(sSpotName[, x, y, z, nFacing]=tTurtle)
+  Returns: sSpotName - if spot was set with success.
+  Sintax: setSpot([sSpotName][, x, y, z, nFacing]=tTurtle)
   ex: setSpot("minecraft:cobblestone", 10,3,5, 0) - cobblestone at coords (10,3,5) facing z- ]]
   
+  if not sSpotName then
+    sSpotName = tSpots.sNextSpot
+    incSpotName()
+  end
+  if isNumber(sSpotName) then
+    z = y
+    y = x
+    x = sSpotName
+    sSpotName = tSpots.sNextSpot
+    incSpotName()
+  end
   if not x then
     x = tTurtle.x
     y = tTurtle.y
@@ -148,7 +173,7 @@ function setSpot(sSpotName, x, y, z, nFacing) --[[ Sets a spot in tSpots table.
     nFacing = tTurtle.facing
   end
   tSpots[sSpotName] = {["x"] = x, ["y"] = y, ["z"] = z, ["facing"] = nFacing}
-  return true
+  return sSpotName
 end
 
 function getSpot(sSpotName) --[[ Gets the spot.
@@ -176,6 +201,14 @@ function goToSpot(sSpotName) --[[ Turtle walks to the spot coords, and turns to 
   return true
 end
 
+-- not tested
+function removeSpot(sSpotName)
+  if not sSpotName then return nil, "removeSpot(SpotName) - You must supply the spot name." end
+  if tSpots[sSpotName] then tSpots[sSpotName] = nil
+  else return false, "Spot not found."
+  end
+  return true
+end
 
 ------ World ------
 
@@ -202,7 +235,7 @@ function getWorldEnt(x, y, z) --[[ Gets the entity at coords x,y,z.
   return tWorld[x][y][z]
 end
 
-function saveWorld() --[[ Saves tWorldinto tWorld.txt
+function saveWorld() --[[ Saves tWorld into tWorld.txt
   24-07-2022 v0.4.0
   Returns: the same as the saveTable function.
   Dependencies: saveTable]]
@@ -619,7 +652,7 @@ function checkFuel(...) --[[ Checks if the fuel is enough.
   ex: checkFuel(123) - checks if turtle has enough fuel to move 132 steps.
       checkFuel() - returns turtle.getFuelLevel()
       checkFuel(10, 20, 45) - checks if fuel is enough to go to coords (10, 20, 45).]]
-  
+  arg = {...}
   if type(turtle.getFuelLimit()) == "string" then return true end
   if #arg == 0 then return turtle.getFuelLevel() end
 
@@ -893,6 +926,7 @@ function INIT() --[[ Loads files to tables, so that the turtle won't forget what
 	loadTurtle()
 	loadRecipes()
   loadSpots()
+  tSpots.sNextSpot = "Spot000" --Name of next spot
   tInv.init()  --must be the last instruction
 end
 
@@ -1361,6 +1395,7 @@ function inspect(...) --[[ Returns the information for block.
       inspect("left") - inspects the block in the left.
   Dependencies: inspectDir, inspectAt]]
 
+  arg = {...}
   if #arg == 0 then return inspectDir("forward") end
   if #arg == 1 then
      if not inspectDir(arg[1]) then return false, "inspect([x,y,z]|[sDir]) - invalid direction" end
@@ -1601,6 +1636,7 @@ function isAny(value, ...) --[[ Compares value with all the arguments.
   ex: isAny(12, "hi", {12},  ) - returns true.
   Dependencies: isAny]]
 	
+  arg = {...}
 	for i = 1, #arg do
 		if type(arg[i]) == "table" then
 			local index = isAny(value, table.unpack(arg[i]))
@@ -1744,6 +1780,7 @@ function checkNil(nArg, ...) --[[ Checks for nil parameters.
   if not nArg then return nil, "checkNil(nArg, ...) - Must supply nArg as the number of arguments." end
   if type(nArg) ~= "number" then return nil, "checkNil(nArg, ...) - narg must be a number." end
 
+  arg = {...}
   local dif = #arg - nArg
 	if dif < 0 then return true, math.abs(dif)
   else return false
@@ -1784,6 +1821,7 @@ function isInRange(nValue, ...) --[[ Checks if nValue is in ... range
   ex: isInRange(1, {0,2}) - return true
       isInRange(17, {1,15},17) - return true]]
 
+      arg = {...}
   local bInRange = false
   for i = 1, #arg do
     local lower, higher
@@ -2027,6 +2065,7 @@ function strLower(...) --[[ Converts only strings to lowercase.
            strings - converted to lower case.
   ex: strLower("Hello", "This is ME", 12) - returns: hello, this is me, 12]]
 
+  arg = {...}
   if #arg == 0 then return nil, "strLower(string[, ...])" end
   local tRS = {}
   for i = 1, #arg do
@@ -3194,6 +3233,7 @@ function turnTo(...) --[[ Turtle turns to direction, block name, empty space, un
       turnTo() - turns to the nearest unscanned space.
   Dependencies: turnToCoord, turnToBlock, turnTo, getNearestBlock, getAllFuelItems, turnLeft, turnRight]]
 
+  arg = {...}
   if #arg >= 3 then return turnToCoord(arg[1], arg[2], arg[3]) end
   if #arg == 0 then return turnToBlock() end
   if #arg ~= 1 then
@@ -3755,6 +3795,7 @@ function goTo(x, y, z) --[[ Goes to position x,y,z (no path finding).
     end
 
     dX, dY, dZ = distTo(x, y, z)
+    print(bHasMoved, dX, dY, dZ)
   until (bHasMoved == false) or (dX == 0 and dY == 0 and dZ == 0)
   if (dX == 0) and (dY == 0) and (dZ == 0) then return true end
   return false
@@ -4176,7 +4217,8 @@ function place(...) --[[ Turtle places nBlocks in a strait line forward or backw
   Dependencies: isDirType, isFacingType, isCarDirType, isEnt, getItemName, selectItem, turnDir, turnBack, forward, back, placeDir, isEmptySlot]]
   
   local sItem, sDir, nQ, nDir, sMessage --arguments: sItem - item name, sDir - direction, nQ - quantity, nDir - number direction[0..3], sMessage - if placing sign.
-  
+  arg = {...}
+
   for i = 1, #arg do
     if type(arg[i]) == "number" then --argument is a number
       if nDir then nQ = arg[i] --the second is quantity
@@ -5248,6 +5290,7 @@ function drop(...) --[[ Drops or sucks items.
   Dependencies: getItemName, search, dropDir]]
 
   local snDir, nDir, nQ, sItem, nSlot
+  arg = {...}
 
   for i = 1, #arg do
     if type(arg[i] ) == "number" then
@@ -5395,6 +5438,8 @@ function getPath(...) --[[ Returns the path, a table of points.
 
   local p1Index, p2Index = 1, 4 --if there is no table in the arg table
   local x1, y1, z1, x2, y2, z2
+  arg = {...}
+
   if not arg[1] then return false --there is no arg
   elseif type(arg[1]) == "table" then
     x1, y1, z1 = table.unpack(arg[1])
@@ -5564,6 +5609,8 @@ function printAt(nCol, nLin, ...) --[[ Prints at col, lin args separated by spac
   ex: printAt(10, 10, "hello", "world") - prints at 10, 10, "hello world"]]
 
 	term.setCursorPos(nCol, nLin)
+  arg = {...}
+
 	for i = 1, #arg do
 		term.write(arg[i].."\t")
 	end
@@ -5601,6 +5648,8 @@ function writeAt(nCol, nLin, ...) --[[ Writes at col, lin args.
   ex: printAt(10, 10, "hello", "world") - prints at 10, 10, "helloworld"]]
 
 	term.setCursorPos(nCol, nLin)
+  arg = {...}
+  
 	for i = 1, #arg do
 		term.write(arg[i])
 	end
@@ -5787,15 +5836,16 @@ function TEST()
   -- test code bellow this line
   -----------------------------
   
-  --print(placeAbove(2))
-  --print(buildRect(1, 2))
-  down()
-  --left()
-  back()
-    
+  print()
+  --turnBack()
+  --forward(4)
+  --turnBack()
+  --back(2)
+
+
   ---------------------------
   -- test code above this line
-	TERMINATE()
 end
 
-INIT()
+INIT()  
+TERMINATE()

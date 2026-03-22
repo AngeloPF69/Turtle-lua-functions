@@ -7,7 +7,7 @@ improving commands in lua for computer craft turtle.
 - [ ] inspect functions must update tEnt, tRevEnt and tWorld on positive inspect.
 - [ ] create function isFuel(nSlot)
 - [ ] and finally create getPath(P1, P2)
-- [x] goto(x,y,z) using pathfinding.
+- [x] goto(x,y,z) not using pathfinding.
 - [ ] create table for equipable tools
 
 ## DONE
@@ -20,7 +20,7 @@ improving commands in lua for computer craft turtle.
 	- [x] entGetId(sEntName) Gets the entity id.
 - [x] save and load tEnts into/from file
 	- [x] saveEnt() Saves table tEnts into tEnts.txt file.
-	- [x] loadEnt() --[[ Loads tEnts.txt into table tEnts.
+	- [x] loadEnt() Loads tEnts.txt into table tEnts.
 - [x] create set/get functions for tEnt.
 - [x] create a reversed table of tEnt: tRevEnt[nID] = sEntityName	
 - [x] save and load table into/from file
@@ -39,13 +39,13 @@ improving commands in lua for computer craft turtle.
 - [x] getInvFuel() Gets the total fuel in inventory.
 - [x] checkFuel(...) Checks if the fuel is enough.
 - [x] isFuelEnoughTo(x, y, z) Checks if the fuel is enough to go to x,y,z
-- [x] getSlotsToFuel(nFuel) --[[ Gets the quantity of items in each slot to fuel nFuel.
+- [x] getSlotsToFuel(nFuel) Gets the quantity of items in each slot to fuel nFuel.
 - [x] getInvFuelItems() Gets the inventory slots and items that are fuel.
 - [x] upgrade refuel to refuelItems(sItemName, nCount) Refuels the turtle with nCount items or fuel from inventory.
 - [x] create tWorld(x, y, z, nEntId)
 - [x] create set/get for tWorld
 	- [x] setWorldEnt(x, y, z, nEnt) Set world coords containing nEnt.
-	- [x] getWorldEnt(x, y, z) --[[ Gets the entity at coords x,y,z.
+	- [x] getWorldEnt(x, y, z) Gets the entity at coords x,y,z.
 - [x] save and load tWorld into/from file
 	- [x] saveWorld() Saves tWorldinto tWorld.txt
 	- [x] loadWorld() Loads tWorld.txt into tWorld table.

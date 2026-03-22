@@ -1,1 +1,9 @@
-{}
+{
+  sNextSpot = "Spot000",
+  Home = {
+    y = 0,
+    x = 0,
+    z = 0,
+    facing = 1,
+  },
+}
