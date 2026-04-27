@@ -133,8 +133,8 @@ function loadSpots() --[[ Loads from file tSpots.txt to table tSpots
 end
 
 function incSpotName() --[[ Increments the name of the next spot
-  04/03/2026 v0.4.0
-  ]]
+  04/03/2026 v0.4.0 ]]
+
   counter = string.sub(tSpots.sNextSpot, 5)
   counter = tonumber(counter)
   counter = counter + 1
@@ -145,7 +145,6 @@ function incSpotName() --[[ Increments the name of the next spot
   return true
 end
 
--- not tested
 function setSpot(sSpotName, x, y, z, nFacing) --[[ Sets a spot in tSpots table.
   05-08-2022 v0.4.0
   Param: sSpotName - string the name of the spot.
@@ -154,12 +153,11 @@ function setSpot(sSpotName, x, y, z, nFacing) --[[ Sets a spot in tSpots table.
   Returns: sSpotName - if spot was set with success.
   Sintax: setSpot([sSpotName][, x, y, z, nFacing]=tTurtle)
   ex: setSpot("minecraft:cobblestone", 10,3,5, 0) - cobblestone at coords (10,3,5) facing z- ]]
-  
+
   if not sSpotName then
     sSpotName = tSpots.sNextSpot
     incSpotName()
-  end
-  if isNumber(sSpotName) then
+  elseif isNumber(sSpotName) then
     z = y
     y = x
     x = sSpotName
@@ -201,8 +199,28 @@ function goToSpot(sSpotName) --[[ Turtle walks to the spot coords, and turns to 
   return true
 end
 
--- not tested
-function removeSpot(sSpotName)
+function listSpots() --[[ Gets a list of all the spots in tSpots.
+  22-03-2026 v0.4.0
+  Returns: table with all spots.
+  Sintax: listSpots()]]
+
+  tList = {}
+  for sName, tSpot in pairs(tSpots) do
+    if type(tSpot) == "table" then
+      tList[sName] = sName
+    end
+  end
+  return tList
+end
+
+function removeSpot(sSpotName) --[[ Removes the sSpotName spot, from tspots.
+  19-04-2026 v04.0
+  Param: sSpotName - string the name of the spot.
+  Returns: true - if it was removed.
+            nil - if no spotname was supplied.
+          false - if spotname was not found.
+  Sintax: removeSpot(sPotName) ]]
+
   if not sSpotName then return nil, "removeSpot(SpotName) - You must supply the spot name." end
   if tSpots[sSpotName] then tSpots[sSpotName] = nil
   else return false, "Spot not found."
@@ -3527,7 +3545,6 @@ function buildSquare(nSide , sBlock) --[[ Builds a square.
   return true
 end
 
---not tested
 function buildRect(width, depth , sBlock) --[[ Builds a reactangle on the floor, starting at turtle position.
 	26-07-2023 v0.4.0
   Param: width, depth - number: width of the rectangle.
@@ -3538,9 +3555,9 @@ function buildRect(width, depth , sBlock) --[[ Builds a reactangle on the floor,
 								 - if it couldn't go up/forward/right/left.
 								 - if there is insuficient blocks to build the rectangle.
 								 - if it couldn't place block.
-	Sintax: buildRectangle([nSide = 1][, sBlock = selected slot block name])
-	ex: buildRectangle() - builds a cube with 1 selected block.
-	dependencies: getParam, getItemName, selectSlot, placeDown, search, forward, strafeRight
+	Sintax: buildRect([width][,depth][, sBlock = selected slot block name])
+	ex: buildRect() - builds a cube with 1 selected block.
+	dependencies: getParam, getItemName, selectSlot, placeBelow, search, forward, strafeRight
 	]]
 	
   if width and (not depth) then depth = width end
@@ -3553,13 +3570,25 @@ function buildRect(width, depth , sBlock) --[[ Builds a reactangle on the floor,
     end
   end
   
-  if not up() then return false, "buildRect(width, depth, blockName) - couldn't go up." end
+  local spot
+  if not up() then
+    return false, "buildRect(width, depth, blockName) - couldn't go up."
+  else
+    spot = setSpot()
+  end
   if (width == 1) and (depth == 1) then return placeBelow() == 1 end
 
-	local nSides = {depth, width, depth, width}
-  local nAlreadyPlaced = {0, 1, 1, 2}
+	local nAlreadyPlaced = {0, 1, 1, 2}
+  local dir = "right"
 	if isAny(0, depth, width) then return true end
-	
+  if sign(width) ~= sign(depth) then
+    dir = "left"
+  end
+  if sign(depth) == -1 then
+    turnBack()
+  end
+  local nSides = {depth, width, depth, width}
+
 	for side = 1, 4 do
 		local nToPlace = math.abs(nSides[side]) - nAlreadyPlaced[side]
 		local nPlaced = placeBelow(nToPlace)
@@ -3573,11 +3602,11 @@ function buildRect(width, depth , sBlock) --[[ Builds a reactangle on the floor,
 			end
 		end
 		if side ~= 4 then
-      turnRight(sign(nSides[side + 1]))
+      turnDir(dir)
       if (nPlaced ~= 0) and (not forward()) then return false, "buildRect(size, blockName) - couldn't advance." end
     else
-      forward(depth)
-      turnRight(sign(nSides[bit32.band(side, 3)+1]))
+      goToSpot(spot)
+      removeSpot(spot)
     end
   end
   return true	
@@ -3795,7 +3824,7 @@ function goTo(x, y, z) --[[ Goes to position x,y,z (no path finding).
     end
 
     dX, dY, dZ = distTo(x, y, z)
-    print(bHasMoved, dX, dY, dZ)
+
   until (bHasMoved == false) or (dX == 0 and dY == 0 and dZ == 0)
   if (dX == 0) and (dY == 0) and (dZ == 0) then return true end
   return false
@@ -4457,15 +4486,14 @@ function placeBelow(nBlocks) --[[ Places nBlocks forwards or backwards in a stra
 
   local placed, nEnt = 0, entAdd(sItemName)
 	for i = 1, math.abs(nBlocks) do
-    if turtle.placeDown() then
-      placed = placed + 1
-      setWorldEnt(tTurtle.x, tTurtle.y - 1, tTurtle.z, nEnt)
-			if not getItemName() then select(search(sItemName)) end
-		else	if getItemName() == "" then
-						if not selectItem(sItemName) then return placed, "placeBelow(nBlocks) - no more items to place." end
-					end
-					return placed, "placeBelow(nBlocks) - couldn't place item below."
-		end
+    while not turtle.placeDown() do
+      if getItemName() == "" then
+        if not selectItem(sItemName) then return placed, "placeBelow(nBlocks) - no more items to place." end
+      else return placed, "placeBelow(nBlocks) - couldn't place item below."
+      end
+    end
+    placed = placed + 1
+    setWorldEnt(tTurtle.x, tTurtle.y - 1, tTurtle.z, nEnt)
 		if i ~= math.abs(nBlocks) then
 			if not forward(sign(nBlocks)) then return false, "placeBelow(Blocks) - couldn't go forward" end
 		end
@@ -4473,7 +4501,6 @@ function placeBelow(nBlocks) --[[ Places nBlocks forwards or backwards in a stra
   return placed
 end
 
---not tested
 function placeAbove(nBlocks) --[[ Places nBlocks forwards or backwards in a strait line, 1 block above the turtle.
   27/08/2021 v0.1.0
   Param: nBlocks - number of blocks to place.
@@ -4492,16 +4519,16 @@ function placeAbove(nBlocks) --[[ Places nBlocks forwards or backwards in a stra
 
   local placed, nEnt = 0, entAdd(sItemName)
   for i = 1, math.abs(nBlocks) do
-    if turtle.placeUp() then
-      placed = placed + 1
-      setWorldEnt(tTurtle.x, tTurtle.y + 1, tTurtle.z, nEnt)
-		else	if getItemName() == "" then
-						if not selectItem(sItemName) then return placed, "placeAbove(nBlocks) - no more items to place." end
-					end
-					return placed, "placeAbove(nBlocks) - couldn't place item below."
-		end
+    while not turtle.placeUp() do
+      if getItemName() == "" then
+        if not selectItem(sItemName) then return placed, "placeBelow(nBlocks) - no more items to place." end
+      else return placed, "placeBelow(nBlocks) - couldn't place item below."
+      end
+    end
+    placed = placed + 1
+    setWorldEnt(tTurtle.x, tTurtle.y - 1, tTurtle.z, nEnt)
 		if i ~= math.abs(nBlocks) then
-			if not forward(sign(nBlocks)) then return false, "placeAbove(Blocks) - couldn't go forward" end
+			if not forward(sign(nBlocks)) then return false, "placeBelow(Blocks) - couldn't go forward" end
 		end
   end
   return placed
@@ -5835,8 +5862,10 @@ function TEST()
 
   -- test code bellow this line
   -----------------------------
-  
-  print()
+  print(goToSpot("Home"))
+  --print(down())
+  --print(buildRect(-4, -4, "minecraft:cobblestone"))
+  --back()
   --turnBack()
   --forward(4)
   --turnBack()
